@@ -69,6 +69,7 @@ if get_option('lib')
   ce_login_lib = library('celogin', cpp_args : args, pic : true, sources : ce_login_sources, dependencies : lib_deps, include_directories : inc_dir, install : true)
   #dependency definition for export to other projects
   lib_ce_login_dep = declare_dependency( dependencies : lib_deps, include_directories : inc_dir, link_with : ce_login_lib)
+  install_headers('celogin/include/CeLogin.h', 'celogin/src/CeLoginAsnV1.h', 'celogin/src/CeLoginUtil.h', 'celogin/src/JsmnUtils.h', 'celogin/src/CeLoginJson.h')
 endif
 
 #Ce-login utility for generating access control files

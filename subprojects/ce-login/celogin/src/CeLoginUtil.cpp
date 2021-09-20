@@ -209,6 +209,79 @@ CeLogin::CeLoginRc CeLogin::decodeAndVerifyAcf(
     if (CeLoginRc::Success == sRc)
     {
         // returns a pointer to the hash value on success, NULL on failure
+        // hash of the data, not the hash authcode
+        sRc = createDigest(decodedAsnParm->sourceFileData->data,
+                           decodedAsnParm->sourceFileData->length,
+                           sHashReceivedJson, sizeof(sHashReceivedJson));
+    }
+
+    if (CeLoginRc::Success == sRc)
+    {
+        // return a valid RSA structure or NULL if an error occurs.
+        sPublicKey = d2i_RSA_PUBKEY(NULL, &publicKeyParm, publicKeyLengthParm);
+        if (!sPublicKey)
+        {
+            sRc = CeLoginRc::VerifyAcf_PublicKeyImportFailure;
+        }
+    }
+
+    // Verify signature over SourceFileData
+    if (CeLoginRc::Success == sRc)
+    {
+        // returns 1 on successful verification
+        int sRsaResult = RSA_verify(
+            CeLogin_Acf_NID, sHashReceivedJson, sizeof(sHashReceivedJson),
+            decodedAsnParm->signature->data, decodedAsnParm->signature->length,
+            sPublicKey);
+        if (1 != sRsaResult)
+        {
+            sRc = CeLoginRc::SignatureNotValid;
+        }
+    }
+
+    if (sPublicKey)
+    {
+        RSA_free(sPublicKey);
+    }
+
+    return sRc;
+}
+CeLogin::CeLoginRc CeLogin::decodeAndVerifySignature(
+    const uint8_t* accessControlFileParm,
+    const uint64_t accessControlFileLengthParm, const uint8_t* publicKeyParm,
+    uint64_t publicKeyLengthParm, CeLogin::CELoginSequenceV1*& decodedAsnParm)
+{
+    CeLoginRc sRc = CeLoginRc::Success;
+
+    RSA* sPublicKey = NULL;
+    uint8_t sHashReceivedJson[CeLogin_DigestLength];
+
+    if (!accessControlFileParm || !publicKeyParm)
+    {
+        sRc = CeLoginRc::VerifyAcf_InvalidParm;
+    }
+
+    if (CeLoginRc::Success == sRc)
+    {
+        // return a valid TYPE structure or NULL if an error occurs
+        // NOTE: there is a "reuse" capability where an existing structure can
+        // be provided,
+        //       however in the event of a failure, the structure is
+        //       automatically free'd. Either way there is undesirable behavior.
+        //       So in this case returning a heap allocation seems slightly more
+        //       straightforward.
+        decodedAsnParm = d2i_CELoginSequenceV1(NULL, &accessControlFileParm,
+                                               accessControlFileLengthParm);
+        if (!decodedAsnParm)
+        {
+            sRc = CeLoginRc::VerifyAcf_AsnDecodeFailure;
+        }
+    }
+
+    if (CeLoginRc::Success == sRc)
+    {
+        // returns a pointer to the hash value on success, NULL on failure
+        // hash of the data, not the hash authcode
         sRc = createDigest(decodedAsnParm->sourceFileData->data,
                            decodedAsnParm->sourceFileData->length,
                            sHashReceivedJson, sizeof(sHashReceivedJson));

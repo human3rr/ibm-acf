@@ -13,8 +13,6 @@ jsmn_dep = declare_dependency(
 	version: meson.project_version(),
 	include_directories: inc_dir)
 
-install_headers(headers, subdir: 'jsmn')
-
 pkg = import('pkgconfig')
 pkg_dirs = ['.', 'jsmn']
 pkg.generate(

@@ -43,6 +43,13 @@ CeLoginRc getDateFromString(const char* dateStringParm,
 
 CeLoginRc getAsn1Time(const CeLogin_Date& dateParm, ASN1_TIME* timeParm);
 
+
+CeLoginRc decodeAndVerifySignature(const uint8_t* accessControlFileParm,
+                             const uint64_t accessControlFileLengthParm,
+                             const uint8_t* publicKeyParm,
+                             uint64_t publicKeyLengthParm,
+                             CELoginSequenceV1*& decodedAsnParm);
+
 CeLoginRc decodeAndVerifyAcf(const uint8_t* accessControlFileParm,
                              const uint64_t accessControlFileLengthParm,
                              const uint8_t* publicKeyParm,

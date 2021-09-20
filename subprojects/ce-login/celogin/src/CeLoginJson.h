@@ -37,6 +37,12 @@ CeLoginRc decodeJson(const char* jsonStringParm,
                      const uint64_t serialNumberLengthParm,
                      CeLoginJsonData& decodedJsonParm);
 
+CeLoginRc isTimeExpired(
+    CeLoginJsonData *sJsonData, 
+    uint64_t &sExpirationTime, 
+    const uint64_t timeSinceUnixEpocInSecondsParm
+);
+
 }; // namespace CeLogin
 
 #endif
