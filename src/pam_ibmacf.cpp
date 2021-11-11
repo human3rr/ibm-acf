@@ -41,6 +41,7 @@
 #include <sdbusplus/bus.hpp>
 #define ACF_FILE_PATH "/etc/acf/service.acf"
 #define PROD_PUB_KEY_FILE_PATH "/srv/ibm-acf/ibmacf-prod.key"
+#define PROD_BACKUP_PUB_KEY_FILE_PATH "/srv/ibm-acf/ibmacf-prod-backup.key"
 #define DEV_PUB_KEY_FILE_PATH "/srv/ibm-acf/ibmacf-dev.key"
 #endif
 
@@ -372,6 +373,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc,
     const char* user_parm = default_user;
     string acfDevPubKeypath = (DEV_PUB_KEY_FILE_PATH);
     string acfProdPubKeypath = (PROD_PUB_KEY_FILE_PATH);
+    string acfProdBackupPubKeypath = (PROD_BACKUP_PUB_KEY_FILE_PATH);
     pam_syslog(pamh, LOG_INFO, "Performing ACF auth for the %s user.\n",
                user_parm);
 
@@ -401,33 +403,39 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t* pamh, int flags, int argc,
                    "Production ACF authentication completed successfully\n");
         return PAM_SUCCESS;
     }
-    else
+
+    verifyRc = verifyACF(acfProdBackupPubKeypath, password, mSerialNumber, pamh);
+
+    if (verifyRc == PAM_SUCCESS)
     {
+        pam_syslog(pamh, LOG_INFO,
+                   "Production Backup ACF authentication completed successfully\n");
+        return PAM_SUCCESS;
+    }
 
-        // Only check for development key if BMC is not in field mode
+    // Only check for development key if BMC is not in field mode
 #ifndef RUN_UNIT_TESTS
-        int fieldModeEnabled = readFieldModeProperty(
-            DBUS_SOFTWARE_OBJECT, DBUS_FIELDMODE_INTERFACE,
-            DBUS_FIELD_MODE_PROP, pamh);
+    int fieldModeEnabled = readFieldModeProperty(
+        DBUS_SOFTWARE_OBJECT, DBUS_FIELDMODE_INTERFACE,
+        DBUS_FIELD_MODE_PROP, pamh);
 #endif
-        if (fieldModeEnabled == FAILURE)
-        {
-            pam_syslog(pamh, LOG_ERR,
-                       "Could not get field mode enabled property\n");
-            return PAM_SYSTEM_ERR;
-        }
+    if (fieldModeEnabled == FAILURE)
+    {
+        pam_syslog(pamh, LOG_ERR,
+                   "Could not get field mode enabled property\n");
+        return PAM_SYSTEM_ERR;
+    }
 
-        if (fieldModeEnabled == 0)
+    if (fieldModeEnabled == 0)
+    {
+        verifyRc =
+            verifyACF(acfDevPubKeypath, password, mSerialNumber, pamh);
+        if (verifyRc == PAM_SUCCESS)
         {
-            verifyRc =
-                verifyACF(acfDevPubKeypath, password, mSerialNumber, pamh);
-            if (verifyRc == PAM_SUCCESS)
-            {
-                pam_syslog(
-                    pamh, LOG_INFO,
-                    "Development ACF authentication completed successfully\n");
-                return PAM_SUCCESS;
-            }
+            pam_syslog(
+                pamh, LOG_INFO,
+                "Development ACF authentication completed successfully\n");
+            return PAM_SUCCESS;
         }
     }
     return verifyRc;
